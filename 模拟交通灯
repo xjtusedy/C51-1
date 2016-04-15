@@ -1,0 +1,187 @@
+#include <reg51.h>
+#include <absacc.h>
+#define uchar unsigned char
+uchar data R2,R3,R4;
+sbit LED_G2=P2^2;//南北绿灯
+sbit LED_Y2=P2^3;//南北黄灯
+sbit LED_R2=P2^4;//南北红灯
+sbit LED_G1=P2^5;//东西绿灯
+sbit LED_Y1=P2^6;//东西黄灯
+sbit LED_R1=P2^7;//东西红灯
+void delay(int count)        
+{
+	unsigned int i;
+	for(i=0;i<count;i++)       
+	;
+ }
+
+//状态1
+void state1()
+{
+       LED_G1=1;	//东西绿灯亮
+       LED_Y1=0;
+       LED_R1=0;
+       LED_G2=0;
+       LED_Y2=0;
+       LED_R2=1;	//南北红灯亮
+      
+}
+
+//状态2
+void state2()
+{                   
+       LED_Y1=0;
+       LED_R1=0;
+       LED_G2=0;
+       LED_Y2=0;
+       LED_R2=1;	//南北红灯亮
+}
+
+//状态3
+void state3()
+{
+       LED_G1=0;
+       LED_R1=0;
+       LED_G2=0;
+       LED_Y2=0;
+       LED_R2=1;	//南北红灯亮
+       LED_Y1=1;	//东西黄灯亮
+}
+
+//状态4
+void state4()
+{
+       LED_G1=0;
+       LED_Y1=0;
+       LED_R1=1;	//东西红灯亮
+       LED_G2=1;	//南北绿灯亮
+       LED_Y2=0;
+       LED_R2=0;
+}
+
+//状态5
+void state5()
+{
+       LED_G1=0;
+       LED_Y1=0;
+       LED_R1=1;	//东西红灯亮
+       LED_Y2=0;
+       LED_R2=0;
+}
+
+//状态6
+void state6()
+{
+       LED_G1=0;
+       LED_Y1=0;
+       LED_R1=1;	//东西红灯亮
+       LED_G2=0;
+       LED_R2=0;
+       LED_Y2=1;	//南北黄灯亮  
+}
+
+void main()
+{
+    P2=0x00;//关闭不相关的LED
+    P0=0xff;
+    P1=0xff;//未使用的接口都置一
+    TMOD=0x01;//置T0工作方式1
+    TH0=0x3c;//置T0定时初值50mS
+    TL0=0xb0;
+    TR0=1;//启动T0          
+    EA=0;
+    LOOP:   R2=20;//置1S计数初值   50mS*20=1S
+	    R3=10;//红灯10S 
+	    WAIT1:      state1();//调用状态1
+			while(!TF0);
+			TF0=0;
+			TH0=0x3c;
+			TL0=0xb0;
+			TR0=1;//启动T0
+			R2--;
+			if (R2>0) goto WAIT1;//判1S到否?未到继续状态1
+			R2=20;//置50mS计数初值
+			R3--;
+			if(R3>0)goto WAIT1;//状态1维持10S
+
+			R2=5;//置50mS计数初值  5*4=20
+			R3=3;//绿灯闪3S
+			R4=4;//闪烁间隔200mS
+	    WAIT2:      state2();//调用状态2
+			if(!TF0) goto WAIT2;//查询50mS到否
+			TF0=0;
+			TH0=0x3c;//恢复T0定时初值50mS
+			TL0=0xb0;
+			R4--;
+			if(R4>0) goto WAIT2;//判200mS到否?未到继续状态2
+			LED_G1=~LED_G1;//东西绿灯闪
+			R4=4;//闪烁间隔200mS
+			R2--;
+			if(R2>0) goto WAIT2;//判1S到否?未到继续状态2
+			R2=5;//置50mS计数初值
+			R3--;
+			if(R3>0) goto WAIT2;//状态2维持3S
+
+R2=20 ;//置50mS计数初值
+       R3=2        ;//黄灯2S
+ 
+WAIT3: state3()       ;//调用状态3
+       if(!TF0) goto WAIT3    ;//查询30mS到否
+       TF0=0;
+       TH0=0x3c    ;//恢复T0定时初值50mS
+       TL0=0xb0;
+	   R2--;
+      if(R2>0) goto WAIT3     ;//判1S到否?未到继续状态3
+       R2=20       ;//置50mS计数初值
+      R3--;
+      if(R3>0) goto WAIT3     ;//状态3维持2S
+
+//;***************************************************
+      R2=20       ;//置50mS计数初值
+       R3=10        ;//绿灯10s
+WAIT4: state4()       ;//调用状态4
+       if(!TF0) goto WAIT4    ;//查询30mS到否
+       TF0=0;
+       TH0=0x3c    ;//恢复T0定时初值50mS
+       TL0=0xb0;
+	   R2--;
+      if(R2>0) goto WAIT4     ;//判1S到否?未到继续状态3
+       R2=20       ;//置50mS计数初值
+       R3--;
+      if(R3>0) goto WAIT4    ;//状态4维持10S
+	   /////////////////////////////////////
+       R2=5        ;//置50mS计数初值    5*4=20
+       R4=4        ;//闪烁间隔200mS
+       R3=3        ;//绿灯闪3S
+WAIT5: state5()       ;//调用状态5
+       if(!TF0) goto WAIT5    ;//查询50mS到否
+       TF0=0;
+       TH0=0x3c    ;//恢复T0定时初值100mS
+       TL0=0xb0;
+        R4--;
+      if(R4>0) goto WAIT5;//判200mS到否?未到继续状态5
+       LED_G2=~LED_G2       ;//南北绿灯闪
+       R4=4        ;//闪烁200mS
+       R2--;
+       if(R2>0) goto WAIT5;
+       R2=5       ;//置100mS计数初值
+       R3--;
+       if(R3>0) goto WAIT5;//状态5维持3S
+       
+
+//;***************************************************
+R2=20    ;//置50mS计数初值
+       R3=2        ;//黄灯2S
+WAIT6: state6()       ;//调用状态6
+       if(!TF0) goto WAIT6    ;//查询100mS到否
+       TF0=0;
+       TH0=0x3c    ;//恢复T0定时初值100mS
+       TL0=0xb0;
+       R2--;
+       if(R2>0) goto WAIT6     ;//判1S到否?未到继续状态6
+       R2=20       ;//置100mS计数初值
+       R3--;
+       if(R3>0) goto WAIT6;//状态6维持2
+       goto   LOOP         ;//大循环
+
+}
